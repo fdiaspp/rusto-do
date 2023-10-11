@@ -34,39 +34,49 @@ struct KanBanBoard {
 }
 
 impl KanBanBoard {
-    fn add(&mut self, todo: &Todo, state: TodoState) {
+    fn add(&mut self, todo: Todo, state: TodoState) -> &mut Self{
         match state {
-            TodoState::TODO => self.todo.push(*todo),
-            TodoState::DOING => self.doing.push(*todo),
-            TodoState::DONE => self.done.push(*todo)
+            TodoState::TODO => self.todo.push(todo),
+            TodoState::DOING => self.doing.push(todo),
+            TodoState::DONE => self.done.push(todo)
         }
+
+        self
     }
 
-    fn remove(&mut self, todo: &Todo, state: TodoState){
+    fn remove(&mut self, todo: &Todo, state: TodoState) -> &mut Self{
         match state {
             TodoState::TODO => self.todo.retain(|x| x != todo),
             TodoState::DOING => self.doing.retain(|x| x != todo),
             TodoState::DONE => self.done.retain( |x| x != todo)
         }
 
+        self
     }
 
-    fn change_state(&mut self, todo: &Todo, from: TodoState, to: TodoState) {
-        self.remove(todo, from);
-        self.add(todo, to)
-        
-    }
+    fn change_state(&mut self, todo_name: &String, to: TodoState) {
+       
+       let result = self.find_todo(todo_name);
+       
+        if result.is_some() {
+            let (todo, state) = result.unwrap();
 
-    fn find_todo(&mut self, name: &String) -> Option<(&Todo, TodoState)> {
+            self
+            .remove(&todo, state)
+            .add(todo.clone(), to);
+        }
+    }        
+
+    fn find_todo(&mut self, name: &String) -> Option<(Todo, TodoState)> {
     
         match self.todo.iter().find(|probe| (**probe).name == *name) {
-            Some(todo) => Some((todo, TodoState::DOING)),
+            Some(todo) => Some((todo.clone(), TodoState::DOING)),
             None => {
                 match self.doing.iter().find(|probe| (**probe).name == *name) {
-                    Some(todo) => Some((todo, TodoState::DOING)),
+                    Some(todo) => Some((todo.clone(), TodoState::DOING)),
                     None => {
                         match self.done.iter().find(|probe| (**probe).name == *name) {
-                            Some(todo) => Some((todo, TodoState::DOING)),
+                            Some(todo) => Some((todo.clone(), TodoState::DOING)),
                             None => {None}
                         }
                     }
@@ -112,7 +122,7 @@ impl View {
         let description = read_stdin("Descricao".to_string());
 
         let todo = Todo {name, description};
-        self.kanban.add(&todo, TodoState::TODO);        
+        self.kanban.add(todo, TodoState::TODO);        
     }
 
     fn move_todo(&mut self) {
@@ -132,10 +142,7 @@ impl View {
             _ => { println!("Entrada Inválida. Considerando 1 como padrão."); TodoState::TODO }
         };
         
-        match self.kanban.find_todo(&name) {
-            Some((todo, from)) => self.kanban.change_state(todo, from, to),
-            None => { }
-        }
+        self.kanban.change_state(&name, to);
         
     }
 }
@@ -150,7 +157,7 @@ fn main(){
         let description = read_stdin("Descricao".to_string());
 
         let todo = Todo {name, description};
-        kb.add(&todo, TodoState::TODO);
+        kb.add(todo, TodoState::TODO);
 
         println!("{:?}", kb);
 
